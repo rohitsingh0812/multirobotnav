@@ -12,7 +12,7 @@ from  Search import ucSearch
 from argparse import ArgumentParser
 from genSketch import runSketch, findBestMoveList
 import ast
-from problems import get_problem, get_problem_a
+from problems import get_problem_b, get_problem_a, get_problem_c
 
 global alpha
 
@@ -92,7 +92,7 @@ class WorldModel:
 		
 		objects = [('', loc, 'black') for loc in self.obstacles]
 		for i, robotLoc in enumerate(self.robotLocs):
-			objects.append(('r_%d' %i , robotLoc, robot_colors(i)))
+			objects.append(('r%d' %i , robotLoc, robot_colors(i)))
 		self.gridMap.drawWorld(objects)
 		#XXXtime.sleep(1)
 
@@ -382,7 +382,9 @@ def get_problem_params(i=0):
                 alpha = yMax -1
         elif i == 6:
             xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_a()
-            
+        elif i ==7:
+            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c()
+
 	return xMax,yMax,obstacles,robotLocs,robotGoalLoc
  
 def get_full_config_path(problem):

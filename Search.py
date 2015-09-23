@@ -35,6 +35,9 @@ def ucSearch(successors, startState, goalTest, heuristic=lambda x: 0):
     agenda.push(startNode, heuristic(startState))
     expanded = set()
     while not agenda.isEmpty():
+        if len(expanded) > 1000:
+            print "expanded over 1000 nodes"
+            break
         parent = agenda.pop()
         if parent.state not in expanded:
             expanded.add(parent.state)
