@@ -11,7 +11,7 @@ from collections import Counter
 #from lib601.search import ucSearch
 from  Search import ucSearch
 from argparse import ArgumentParser
-from genSketch import runSketch
+from genSketch import runSketch, findBestMoveList
 import ast
 
 class Primitive:
@@ -366,60 +366,12 @@ def get_problem_params(i=0):
 def get_full_config_path(problem):
 	# full config space plan:
 	start,goalTest,heuristic,_ = problem.getSearchParams(problem.bots)
-	path, expanded, Cost = ucSearch(successors(\
-			problem.wm,False, obstacles), start,goalTest,heuristic) 
-			#returns the pat
+	path, expanded, Cost = ucSearch(successors(problem.wm,False, obstacles), start,goalTest,heuristic) 
 	print "full config space plan. expanded nodes = %s , path length =%s "\
 			% (expanded, len(path))
 	return path
 
-def findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc):
-	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,6,58)
-	#Doing binary search for appropriate values of TMAX and waitsMIN
-	waitsMIN=0
-	
-	
-	#first find best TMAX
-	TMAX_min = 1
-	TMAX_max = (xMax+yMax)*2+len(robotLocs)
-	while(True):#works on max and doesn't work on min
-		TMAX_curr = int((TMAX_max + TMAX_min)/2) 
-		print "CURR TMAX: ",TMAX_min, TMAX_max
-		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX_curr,waitsMIN)
-		if(len(temp_mvlist) > 0):
-			#go left
-			TMAX_max = TMAX_curr
-		else:
-			#go right
-			TMAX_min = TMAX_curr		
-				
-		if TMAX_max - TMAX_min <= 1:
-			TMAX=TMAX_max
-			break
-	print "Optimal TMAX = " +str(TMAX)
-	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
-	#time.sleep(2)
-	
-	#then find best waitsMIN
-	waitsMIN_min = 0
-	waitsMIN_max = (TMAX*len(robotLocs)*(TMAX+1))/2
-	while(True):#works on min and doesn't work on max
-		waitsMIN_curr = int((waitsMIN_max + waitsMIN_min)/2)
-		print "CURR waitsMIN: ",waitsMIN_min, waitsMIN_max
-		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN_curr)
-		if(len(temp_mvlist) == 0):
-			#go left
-			waitsMIN_max = waitsMIN_curr
-		else:
-			#go right
-			waitsMIN_min = waitsMIN_curr
-		if waitsMIN_max - waitsMIN_min <= 1:
-			waitsMIN=waitsMIN_min
-			break;
-	print "Optimal waitsMIN = " +str(waitsMIN)
-	movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
-	time.sleep(2)
-	return movelist
+
 
 if __name__=="__main__":
 	parser = ArgumentParser()
@@ -437,7 +389,7 @@ if __name__=="__main__":
 	
 	xMax,yMax,obstacles,robotLocs,robotGoalLoc = get_problem_params(args.p)
 	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
-	print get_full_config_path(problem)
+	#print get_full_config_path(problem)
 	problem.wm.draw()
 	
 	if args.simulate_sol != "":

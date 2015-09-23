@@ -1,5 +1,6 @@
 from subprocess import call,  Popen, PIPE, check_output, CalledProcessError, STDOUT
 import ast
+import time
 import math
 
 def writeSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN,nbitsT):
@@ -110,7 +111,53 @@ def runSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
 #runSketch('temp.sk',5,5,[[1,1], [2,2]],((0,0), (3,2), (4,3), (1,2), (1,4)),((2,1), (3,4), (1,4), (0,0), (4,1)), 6, 58,3)
 	
 	
+def findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc):
+	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,6,58)
+	#Doing binary search for appropriate values of TMAX and waitsMIN
+	waitsMIN=0
 	
+	
+	#first find best TMAX
+	TMAX_min = 1
+	TMAX_max = (xMax+yMax)*2+len(robotLocs)
+	while(True):#works on max and doesn't work on min
+		TMAX_curr = int((TMAX_max + TMAX_min)/2) 
+		print "CURR TMAX: ",TMAX_min, TMAX_max
+		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX_curr,waitsMIN)
+		if(len(temp_mvlist) > 0):
+			#go left
+			TMAX_max = TMAX_curr
+		else:
+			#go right
+			TMAX_min = TMAX_curr		
+				
+		if TMAX_max - TMAX_min <= 1:
+			TMAX=TMAX_max
+			break
+	print "Optimal TMAX = " +str(TMAX)
+	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
+	#time.sleep(2)
+	
+	#then find best waitsMIN
+	waitsMIN_min = 0
+	waitsMIN_max = (TMAX*len(robotLocs)*(TMAX+1))/2
+	while(True):#works on min and doesn't work on max
+		waitsMIN_curr = int((waitsMIN_max + waitsMIN_min)/2)
+		print "CURR waitsMIN: ",waitsMIN_min, waitsMIN_max
+		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN_curr)
+		if(len(temp_mvlist) == 0):
+			#go left
+			waitsMIN_max = waitsMIN_curr
+		else:
+			#go right
+			waitsMIN_min = waitsMIN_curr
+		if waitsMIN_max - waitsMIN_min <= 1:
+			waitsMIN=waitsMIN_min
+			break;
+	print "Optimal waitsMIN = " +str(waitsMIN)
+	movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
+	time.sleep(2)
+	return movelist
 	
 	
 	
