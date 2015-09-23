@@ -29,7 +29,7 @@ class SearchNode:
 
 def ucSearch(successors, startState, goalTest, heuristic=lambda x: 0):
     if goalTest(startState):
-        return [startState]
+        return [startState], 0, 0
     startNode = SearchNode(startState, None, 0)
     agenda = PriorityQueue()
     agenda.push(startNode, heuristic(startState))

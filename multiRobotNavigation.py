@@ -8,11 +8,13 @@ from tarjan import tarjan
 import gridMap
 from itertools import product, chain
 from collections import Counter
-#from lib601.search import ucSearch
 from  Search import ucSearch
 from argparse import ArgumentParser
 from genSketch import runSketch, findBestMoveList
 import ast
+from problems import get_problem 
+
+global alpha
 
 class Primitive:
 	def __init__(self):
@@ -109,6 +111,7 @@ def moveLocByDirection(loc, direction):
 
 
 dirs = ["north", "south", "east", "west"]
+subdirs = ["north","south"]
 names = "abcdefghijklmnpqrstuvwxyz"
 actions = dirs +  ['nop']
 
@@ -121,6 +124,14 @@ def successors(wm, single, extra_obstacles=[None]):
 		else: return False
 
 	def applyAction(action, robotLoc):
+                global alpha
+                if robotLoc[1] != alpha:
+                    valid_dirs = subdirs
+                else:
+                    valid_dirs = dirs
+
+                if not action in valid_dirs:
+                    return robotLoc
 		if action =="nop":
 			return robotLoc
 		else:
@@ -131,7 +142,6 @@ def successors(wm, single, extra_obstacles=[None]):
 			 
 
 	def get_successors(robotStates):
-		
 		joint_actions = list(product(actions, repeat=len(wm.robotLocs)))
 		bots = range(len(robotStates))
 		next_states = []
@@ -166,8 +176,13 @@ def successors(wm, single, extra_obstacles=[None]):
 			next_states.append( (tuple(robotLocs) , cost))
 		return next_states
 	def single_get_successors(robotLoc):
+                global alpha
+                if robotLoc[1] != alpha:
+                    valid_dirs = subdirs
+                else:
+                    valid_dirs = dirs
 		next_states = []
-		for act in dirs:
+		for act in valid_dirs:
 			rl = moveLocByDirection(list(robotLoc), act)
 			if legalMove(rl):
 				next_states.append((tuple(rl),1))
@@ -360,7 +375,8 @@ def get_problem_params(i=0):
 		robotLocs = [[3*i,i+1] for i in range(1)]
 		robotGoalLoc = [[i+2,i+5] for i in range(1)]
 
-
+        elif i ==5:
+                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem(6,2)
 	return xMax,yMax,obstacles,robotLocs,robotGoalLoc
  
 def get_full_config_path(problem):
@@ -374,6 +390,7 @@ def get_full_config_path(problem):
 
 
 if __name__=="__main__":
+        global alpha
 	parser = ArgumentParser()
 	
 	parser.add_argument("--noh",action="store_true")
@@ -384,14 +401,27 @@ if __name__=="__main__":
 	parser.add_argument("--simulate_sol",type=str,default="")
 	parser.add_argument("--time_max", type=int, default=-1)
 	parser.add_argument("--waits_reward", type=int, default=0)
+
+        parser.add_argument("--n",type=int, default=None)
+        parser.add_argument("--a",type=int, default=None)
+        parser.add_argument("--full", action="store_true")
+
 	
 	args = parser.parse_args()
-	
 	xMax,yMax,obstacles,robotLocs,robotGoalLoc = get_problem_params(args.p)
+        
+        if args.n != None and args.a != None:
+            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem(args.n,args.a)
+            alpha = args.a
+        else:
+            alpha = None
+        if args.p > 4:
+            alpha = yMax -1  #for p5
+
 	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
-	#print get_full_config_path(problem)
+        if args.full:
+	    get_full_config_path(problem)
 	problem.wm.draw()
-	
 	if args.simulate_sol != "":
 		with open(args.simulate_sol,'r') as f:
 			lines = f.readlines()
@@ -436,8 +466,8 @@ if __name__=="__main__":
 				
 	else:
 		
-		if args.p != 0:
-			get_full_config_path(problem)
+		#if args.p != 0:
+	        #		get_full_config_path(problem)
 
 		compositeRobots,paths, total_expanded,C= generatePathandConstraints(problem)
 		CR = list(compositeRobots)
@@ -491,5 +521,4 @@ if __name__=="__main__":
 						time.sleep(1)
 
   
-	#get_full_config_path(problem)
  
