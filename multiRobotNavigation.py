@@ -12,7 +12,7 @@ from  Search import ucSearch
 from argparse import ArgumentParser
 from genSketch import runSketch, findBestMoveList
 import ast
-from problems import get_problem 
+from problems import get_problem, get_problem_a
 
 global alpha
 
@@ -125,7 +125,7 @@ def successors(wm, single, extra_obstacles=[None]):
 
 	def applyAction(action, robotLoc):
                 global alpha
-                if robotLoc[1] != alpha:
+                if alpha != None and robotLoc[1] != alpha:
                     valid_dirs = subdirs
                 else:
                     valid_dirs = dirs
@@ -177,7 +177,7 @@ def successors(wm, single, extra_obstacles=[None]):
 		return next_states
 	def single_get_successors(robotLoc):
                 global alpha
-                if robotLoc[1] != alpha:
+                if alpha!=None and  robotLoc[1] != alpha:
                     valid_dirs = subdirs
                 else:
                     valid_dirs = dirs
@@ -256,6 +256,7 @@ def generatePathandConstraints(problem):
 		paths[i], expanded, Cost = ucSearch( \
 				successors(problem.wm, single=True), start,goalTest,heuristic)
 		if paths[i] == None:
+                        import pdb; pdb.set_trace()
 			print "failed to find individual path,  no solution"
 			didFail()
 
@@ -377,6 +378,11 @@ def get_problem_params(i=0):
 
         elif i ==5:
                 xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem(6,2)
+                global alpha
+                alpha = yMax -1
+        elif i == 6:
+            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_a()
+            
 	return xMax,yMax,obstacles,robotLocs,robotGoalLoc
  
 def get_full_config_path(problem):
@@ -415,13 +421,12 @@ if __name__=="__main__":
             alpha = args.a
         else:
             alpha = None
-        if args.p > 4:
-            alpha = yMax -1  #for p5
-
-	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
+       	
+        problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
         if args.full:
 	    get_full_config_path(problem)
 	problem.wm.draw()
+        raw_input("Done")
 	if args.simulate_sol != "":
 		with open(args.simulate_sol,'r') as f:
 			lines = f.readlines()
@@ -521,4 +526,4 @@ if __name__=="__main__":
 						time.sleep(1)
 
   
- 
+        raw_input("Done")

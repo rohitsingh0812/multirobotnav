@@ -1,6 +1,12 @@
 """
 figure 3b from paper.  Determine (n)umber of robots and degree of coupleing (alpha)
 """
+def get_problem_a():
+    starts = [(0,4), (1,4), (2,4), (3,4), (4,4), (4,3), (4,2), (4,1), (4,0), (3,0), (2,0), (1,0), (0,0), (0,1), (0,2), (0,3)]
+    goals = [starts[(i+8)%16] for i in range(len(starts))]
+    obstacles = [(2,2)]
+    xMax,yMax = 5,5
+    return xMax, yMax, starts, goals, obstacles
 
 def get_problem(n,alpha):
     xMax = n/alpha + alpha -1
