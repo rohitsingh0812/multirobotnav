@@ -377,7 +377,7 @@ def get_problem_params(i=0):
 		robotGoalLoc = [[i+2,i+5] for i in range(1)]
 
         elif i ==5:
-                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem(6,2)
+                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(6,2)
                 global alpha
                 alpha = yMax -1
         elif i == 6:
@@ -419,7 +419,7 @@ if __name__=="__main__":
 	xMax,yMax,obstacles,robotLocs,robotGoalLoc = get_problem_params(args.p)
         
         if args.n != None and args.a != None:
-            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem(args.n,args.a)
+            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(args.n,args.a)
             alpha = args.a
         else:
             alpha = None
@@ -441,9 +441,9 @@ if __name__=="__main__":
 				time.sleep(1)
 	elif args.sketch:
 		if(args.time_max > 0):
-			movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,args.time_max,args.waits_reward)
+			movelist = runSketch('temp.sk',problem,args.time_max,args.waits_reward,alpha)
 		else:
-			movelist = findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc)
+			movelist = findBestMoveList(problem,alpha)
 		
 		if(len(movelist) == 0):
 			print "Couldn't find solution with Sketch, TODO: change TMAX etc"

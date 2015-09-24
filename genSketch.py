@@ -3,9 +3,14 @@ import ast
 import time
 import math
 
-def writeSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN,nbitsT):
+def writeSketch(filename,problem,TMAX,waitsMIN,alpha):
+	xMax = problem.wm.xMax
+	yMax = problem.wm.yMax
+	obstacles = problem.obstacles 
+	robotLocs = problem.robotLocs
+	robotGoalLoc = problem.goalStates
 	f = open(filename,'w\n')
-	NUMBOTS= len(robotLocs)
+	NUMBOTS= problem.num
 	assert NUMBOTS == len(robotGoalLoc);
 	
 	#take required parameters and hardcode everything!
@@ -25,7 +30,12 @@ def writeSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMI
 	f.write('\n')
 	f.write('generator void moveOrWait(ref int curx, ref int cury, int i, int t, ref int waits){\n')
 	f.write('	int move = ??(3);\n')
-	f.write('	assert(move == LEFT || move == RIGHT || move == UP || move ==DOWN || move == WAIT);\n')
+	if(alpha != None):
+		#only allowed moves would be UP or DOWN or WAIT unless cury==alpha
+		f.write('	if(cury != '+str(alpha)+'){\n')
+		f.write('		assert(move != LEFT && move != RIGHT);\n')
+		f.write('	}')
+	f.write('		assert(move == LEFT || move == RIGHT || move == UP || move ==DOWN || move == WAIT);\n')
 	f.write('	\n')
 	f.write('	if(move == LEFT){\n')
 	f.write('		curx = curx -1;\n')
@@ -85,9 +95,8 @@ def writeSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMI
 
 	f.close()
 	
-def runSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN):
-	nbitsT = int(math.log(TMAX,2) + 1)
-	writeSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN,nbitsT)
+def runSketch(filename,problem,TMAX,waitsMIN,alpha):
+	writeSketch(filename,problem,TMAX,waitsMIN,alpha)
 	#call(["sk9l",filename])
 	try:
 		X = check_output(['/usr/bin/sk9l', filename],stderr=STDOUT)
@@ -111,19 +120,19 @@ def runSketch(filename,xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
 #runSketch('temp.sk',5,5,[[1,1], [2,2]],((0,0), (3,2), (4,3), (1,2), (1,4)),((2,1), (3,4), (1,4), (0,0), (4,1)), 6, 58,3)
 	
 	
-def findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc):
-	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,6,58)
+def findBestMoveList(problem,alpha):
+	#movelist = runSketch('temp.sk',problem,6,58,alpha)
 	#Doing binary search for appropriate values of TMAX and waitsMIN
 	waitsMIN=0
 	
 	
 	#first find best TMAX
 	TMAX_min = 1
-	TMAX_max = (xMax+yMax)*2+len(robotLocs)
+	TMAX_max = (problem.wm.xMax+problem.wm.yMax)*2+problem.num
 	while(True):#works on max and doesn't work on min
 		TMAX_curr = int((TMAX_max + TMAX_min)/2) 
 		print "CURR TMAX: ",TMAX_min, TMAX_max
-		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX_curr,waitsMIN)
+		temp_mvlist = runSketch('temp.sk',problem,TMAX_curr,waitsMIN,alpha)
 		if(len(temp_mvlist) > 0):
 			#go left
 			TMAX_max = TMAX_curr
@@ -135,16 +144,16 @@ def findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc):
 			TMAX=TMAX_max
 			break
 	print "Optimal TMAX = " +str(TMAX)
-	#movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
+	#movelist = runSketch('temp.sk',problem,TMAX,waitsMIN,alpha)
 	#time.sleep(2)
 	
 	#then find best waitsMIN
 	waitsMIN_min = 0
-	waitsMIN_max = (TMAX*len(robotLocs)*(TMAX+1))/2
+	waitsMIN_max = (TMAX*problem.num*(TMAX+1))/2
 	while(True):#works on min and doesn't work on max
 		waitsMIN_curr = int((waitsMIN_max + waitsMIN_min)/2)
 		print "CURR waitsMIN: ",waitsMIN_min, waitsMIN_max
-		temp_mvlist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN_curr)
+		temp_mvlist = runSketch('temp.sk',problem,TMAX,waitsMIN_curr,alpha)
 		if(len(temp_mvlist) == 0):
 			#go left
 			waitsMIN_max = waitsMIN_curr
@@ -155,7 +164,7 @@ def findBestMoveList(xMax,yMax,obstacles,robotLocs,robotGoalLoc):
 			waitsMIN=waitsMIN_min
 			break;
 	print "Optimal waitsMIN = " +str(waitsMIN)
-	movelist = runSketch('temp.sk',xMax,yMax,obstacles,robotLocs,robotGoalLoc,TMAX,waitsMIN)
+	movelist = runSketch('temp.sk',problem,TMAX,waitsMIN,alpha)
 	time.sleep(2)
 	return movelist
 	
