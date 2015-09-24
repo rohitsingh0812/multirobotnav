@@ -119,55 +119,73 @@ def runSketch(filename,problem,TMAX,waitsMIN,alpha):
 
 #runSketch('temp.sk',5,5,[[1,1], [2,2]],((0,0), (3,2), (4,3), (1,2), (1,4)),((2,1), (3,4), (1,4), (0,0), (4,1)), 6, 58,3)
 	
+
+def binary_search(minval,maxval,criterion):
+	#find smallest value that works, we know that maxval works
+	working_state = None
+	working_val = -1
+	while(True):
+		currval = int((minval+maxval)/2)
+		(worked,state) = criterion(currval)
+		if(worked):
+			working_state = state
+			working_val = currval
+			maxval = currval
+		else:
+			minval = currval
+		if(maxval - minval <= 1):
+			return (working_val,working_state)
+
+			
+			
+
+def findBestMoveList(problem,alpha,do_waits):
+	#movelist = runSketch('temp.sk',problem,6,58,alpha)
+	#Doing binary search for appropriate values of TMAX and waitsMIN
+	waitsMIN = 0
+	def crit_tmax(val):
+		print "TRYING TMAX,waitsMIN: ", val, waitsMIN
+		temp_mvlist = runSketch('temp.sk',problem,val,waitsMIN,alpha)
+		return (len(temp_mvlist) > 0, temp_mvlist)
 	
-def findBestMoveList(problem,alpha):
+	TMAX_max = (problem.wm.xMax+problem.wm.yMax)*2+problem.num
+	
+	TMAX, movelist = binary_search(1,TMAX_max,crit_tmax)
+	
+	if(do_waits):
+		def crit_waitsmin(val):
+			print "TRYING TMAX,waitsMIN: ", TMAX, -val
+			temp_mvlist = runSketch('temp.sk',problem,TMAX,-val,alpha)
+			return (len(temp_mvlist) > 0, temp_mvlist)	
+		waitsMIN_max = (TMAX*problem.num*(TMAX+1))/2
+		waitsMIN, movelist = binary_search(-waitsMIN_max,0,crit_waitsmin)
+		waitsMIN = -waitsMIN	
+	
+	print "Optimal TMAX,waitsMIN: ",TMAX,waitsMIN
+	return movelist
+	
+	
+def findBestMoveListLinear(problem,alpha):
 	#movelist = runSketch('temp.sk',problem,6,58,alpha)
 	#Doing binary search for appropriate values of TMAX and waitsMIN
 	waitsMIN=0
-	
-	
 	#first find best TMAX
 	TMAX_min = 1
-	TMAX_max = (problem.wm.xMax+problem.wm.yMax)*2+problem.num
-	while(True):#works on max and doesn't work on min
-		TMAX_curr = int((TMAX_max + TMAX_min)/2) 
-		print "CURR TMAX: ",TMAX_min, TMAX_max
+	TMAX_max = min(100,(problem.wm.xMax+problem.wm.yMax)*2+problem.num)
+	TMAX_curr = 1
+	while(TMAX_curr < TMAX_max):#works on max and doesn't work on min
+		print "CURR TMAX: ",TMAX_curr
 		temp_mvlist = runSketch('temp.sk',problem,TMAX_curr,waitsMIN,alpha)
 		if(len(temp_mvlist) > 0):
-			#go left
-			TMAX_max = TMAX_curr
-		else:
-			#go right
-			TMAX_min = TMAX_curr		
-				
-		if TMAX_max - TMAX_min <= 1:
-			TMAX=TMAX_max
+			#found it!
+			movelist = temp_mvlist
+			TMAX = TMAX_curr
 			break
-	print "Optimal TMAX = " +str(TMAX)
-	#movelist = runSketch('temp.sk',problem,TMAX,waitsMIN,alpha)
-	#time.sleep(2)
-	
-	#then find best waitsMIN
-	waitsMIN_min = 0
-	waitsMIN_max = (TMAX*problem.num*(TMAX+1))/2
-	while(True):#works on min and doesn't work on max
-		waitsMIN_curr = int((waitsMIN_max + waitsMIN_min)/2)
-		print "CURR waitsMIN: ",waitsMIN_min, waitsMIN_max
-		temp_mvlist = runSketch('temp.sk',problem,TMAX,waitsMIN_curr,alpha)
-		if(len(temp_mvlist) == 0):
-			#go left
-			waitsMIN_max = waitsMIN_curr
 		else:
-			#go right
-			waitsMIN_min = waitsMIN_curr
-		if waitsMIN_max - waitsMIN_min <= 1:
-			waitsMIN=waitsMIN_min
-			break;
-	print "Optimal waitsMIN = " +str(waitsMIN)
-	movelist = runSketch('temp.sk',problem,TMAX,waitsMIN,alpha)
-	time.sleep(2)
+			TMAX_curr = TMAX_curr + 1		
+				
+	print "Optimal TMAX = " +str(TMAX)
 	return movelist
-	
 	
 	
 	

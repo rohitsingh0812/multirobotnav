@@ -10,7 +10,7 @@ from itertools import product, chain
 from collections import Counter
 from  Search import ucSearch
 from argparse import ArgumentParser
-from genSketch import runSketch, findBestMoveList
+from genSketch import runSketch, findBestMoveList, findBestMoveListLinear
 import ast
 from problems import get_problem_b, get_problem_a, get_problem_c
 
@@ -395,7 +395,26 @@ def get_full_config_path(problem):
 			% (expanded, len(path))
 	return path
 
-
+def sketch_simulate_graphic(movelist, problem,filename):
+	timedmoves = dict()
+	for entry in movelist:
+		timestep = entry[0]
+		if timestep not in timedmoves:
+			timedmoves[timestep] = []
+		robot = entry[1]
+		move = entry[2]
+		mvstrlist = ["west","east","north","south","none"]
+		mvstr = mvstrlist[move]
+		if(mvstr!="none"):
+			timedmoves[timestep].append((robot,mvstr))
+	for k in sorted(timedmoves.keys()):
+		print "Time: " + str(k+1)
+		for (robot,mvstr) in timedmoves[k]:
+			prim = MovePrimitive(mvstr)
+			problem.wm.doi(robot,prim)
+		time.sleep(1)
+	with open(filename,'w') as f:
+		f.write(str(timedmoves))
 
 if __name__=="__main__":
         global alpha
@@ -406,6 +425,7 @@ if __name__=="__main__":
 	parser.add_argument("--p", type=int, default=0)
 	
 	parser.add_argument("--sketch",action="store_true")
+	parser.add_argument("--waits_optimize",action="store_true")
 	parser.add_argument("--simulate_sol",type=str,default="")
 	parser.add_argument("--time_max", type=int, default=-1)
 	parser.add_argument("--waits_reward", type=int, default=0)
@@ -443,7 +463,7 @@ if __name__=="__main__":
 		if(args.time_max > 0):
 			movelist = runSketch('temp.sk',problem,args.time_max,args.waits_reward,alpha)
 		else:
-			movelist = findBestMoveList(problem,alpha)
+			movelist = findBestMoveList(problem,alpha,args.waits_optimize)
 		
 		if(len(movelist) == 0):
 			print "Couldn't find solution with Sketch, TODO: change TMAX etc"
@@ -451,25 +471,14 @@ if __name__=="__main__":
 		else:
 			#each entry in movelist is (time,robotID, move)
 			#move 0 - LEFT/west, 1- RIGHT/east, 2- UP/north, 3 - DOWN/south, 4- NO CHANGE
-			timedmoves = dict()
-			for entry in movelist:
-				timestep = entry[0]
-				if timestep not in timedmoves:
-					timedmoves[timestep] = []
-				robot = entry[1]
-				move = entry[2]
-				mvstrlist = ["west","east","north","south","none"]
-				mvstr = mvstrlist[move]
-				if(mvstr!="none"):
-					timedmoves[timestep].append((robot,mvstr))
-			for k in sorted(timedmoves.keys()):
-				print "Time: " + str(k+1)
-				for (robot,mvstr) in timedmoves[k]:
-					prim = MovePrimitive(mvstr)
-					problem.wm.doi(robot,prim)
-				time.sleep(1)
-			with open('temp_'+str(args.p)+'.sol','w') as f:
-				f.write(str(timedmoves))
+			fname = 'temp'
+			if(args.p > 0 ):
+				fname = fname+"_p" + str(args.p)
+			if(args.a):
+				fname = fname + "_a" + str(args.a)
+			if(args.n):
+				fname = fname + "_n" + str(args.n)
+			sketch_simulate_graphic(movelist,problem,fname + ".sol")
 				
 	else:
 		
