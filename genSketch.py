@@ -27,6 +27,7 @@ def writeSketch(filename,problem,TMAX,waitsMIN,alpha):
 	f.write('\n')
 	f.write('\n')
 	f.write('void MOVING(int time, int robot, int move);\n')
+	f.write('void WAITREWARD(int waits);\n')
 	f.write('\n')
 	f.write('generator void moveOrWait(ref int curx, ref int cury, int i, int t, ref int waits){\n')
 	f.write('	int move = ??(3);\n')
@@ -89,6 +90,7 @@ def writeSketch(filename,problem,TMAX,waitsMIN,alpha):
 		#f.write('		t++;\n')
 	#f.write('		assert (t <= TMAX);\n')
 	f.write('		assert( waits >= waitsMIN);\n')
+	f.write('		WAITREWARD( waits );\n')
 	for l in range(NUMBOTS):
 		f.write('		assert(goalsx_'+str(l)+' == locsx_'+str(l)+' && goalsy_'+str(l)+' == locsy_'+str(l)+');\n')
 	f.write('}\n')
@@ -108,17 +110,21 @@ def runSketch(filename,problem,TMAX,waitsMIN,alpha):
 		print "Not solved"
 		return []
 	movelist = []
+	waitval = -1
 	for line in X.split('\n'):
 		if ('MOVING' in line) and ('uninterp' not in line):
 			line = line.replace('MOVING(','[')
 			line = line.replace(');',']')
 			movelist.append(ast.literal_eval(line.strip()))
+		if ('WAITREWARD' in line) and ('uninterp' not in line):
+			line = line.replace('WAITREWARD(','')
+			line = line.replace(');','')
+			waitval =int(line)
+			
 			#print line
 	return movelist
 	
 
-#runSketch('temp.sk',5,5,[[1,1], [2,2]],((0,0), (3,2), (4,3), (1,2), (1,4)),((2,1), (3,4), (1,4), (0,0), (4,1)), 6, 58,3)
-	
 
 def binary_search(minval,maxval,criterion):
 	#find smallest value that works, we know that maxval works
@@ -140,7 +146,6 @@ def binary_search(minval,maxval,criterion):
 			
 
 def findBestMoveList(problem,alpha,do_waits):
-	#movelist = runSketch('temp.sk',problem,6,58,alpha)
 	#Doing binary search for appropriate values of TMAX and waitsMIN
 	waitsMIN = 0
 	def crit_tmax(val):
@@ -166,7 +171,6 @@ def findBestMoveList(problem,alpha,do_waits):
 	
 	
 def findBestMoveListLinear(problem,alpha):
-	#movelist = runSketch('temp.sk',problem,6,58,alpha)
 	#Doing binary search for appropriate values of TMAX and waitsMIN
 	waitsMIN=0
 	#first find best TMAX
@@ -186,6 +190,185 @@ def findBestMoveListLinear(problem,alpha):
 				
 	print "Optimal TMAX = " +str(TMAX)
 	return movelist
+	
+	
+from z3 import *
+
+def addBitsToz3(NUMBOTS,timeStep,bits,s):
+	for i in range(NUMBOTS):
+		bits[i][timeStep] = dict() 
+		for DIR in ['l','r','u','d']:
+			bits[i][timeStep][DIR] = Bool('r'+str(i)+'_t'+str(timeStep)+'_'+DIR)
+		#constraints for only one of them being true or none
+		constr = And(Not(bits[i][timeStep]['l']),Not(bits[i][timeStep]['r']),Not(bits[i][timeStep]['u']),Not(bits[i][timeStep]['d']))
+		constr = Or(constr,And(bits[i][timeStep]['l'],Not(bits[i][timeStep]['r']),Not(bits[i][timeStep]['u']),Not(bits[i][timeStep]['d'])))
+		constr = Or(constr,And(Not(bits[i][timeStep]['l']),bits[i][timeStep]['r'],Not(bits[i][timeStep]['u']),Not(bits[i][timeStep]['d'])))
+		constr = Or(constr,And(Not(bits[i][timeStep]['l']),Not(bits[i][timeStep]['r']),bits[i][timeStep]['u'],Not(bits[i][timeStep]['d'])))
+		constr = Or(constr,And(Not(bits[i][timeStep]['l']),Not(bits[i][timeStep]['r']),Not(bits[i][timeStep]['u']),bits[i][timeStep]['d']))
+		s.add(constr)
+
+def addConstraintsIsValid(xMax,yMax,obstacles,s,curpos):
+	s.add(curpos[0] < xMax)
+	s.add(curpos[0] >= 0)
+	s.add(curpos[1] < yMax)
+	s.add(curpos[1] >= 0)
+	for (ox,oy) in obstacles:
+		s.add(Or(ox != curpos[0], oy != curpos[1]))
+
+def getLocs(robotLocs,curpos):
+	i=0
+	for (rx,ry) in robotLocs:
+		curpos[i] = (rx,ry)
+		i = i+1
+import copy
+def verifyMoveList(problem,movelist):
+	#each entry in movelist is (time,robotID, move)
+	#move 0 - LEFT/west, 1- RIGHT/east, 2- UP/north, 3 - DOWN/south, 4- NO CHANGE
+	movelist.sort(key=lambda x:x[0])
+	
+	xMax = problem.wm.xMax
+	yMax = problem.wm.yMax
+	
+	obstacles = problem.obstacles 
+	rlocs = problem.robotLocs
+	robotGoalLoc = problem.goalStates
+	NUMBOTS= problem.num
+	assert NUMBOTS == len(robotGoalLoc);
+	robotLocs = []
+	for (a,b) in rlocs:
+		robotLocs.append((a,b))
+	for (t,r,mv) in movelist:
+		curx = robotLocs[r][0]
+		cury = robotLocs[r][1]
+		#print r,": (",curx,cury,")"
+		newx = curx
+		newy = cury
+		if mv == 0: #LEFT
+			newx = curx - 1
+		elif mv == 1:
+			newx = curx + 1
+		elif mv == 2:
+			newy = cury + 1
+		elif mv == 3:
+			newy = cury - 1
+		#print r,": (",newx,newy,")"
+		robotLocs[r] = (newx,newy)
+	for r in range(NUMBOTS):
+		if robotLocs[r][0] != robotGoalLoc[r][0] or robotLocs[r][1] != robotGoalLoc[r][1] :
+			print "failed here: ",robotLocs
+			print robotGoalLoc
+			exit(1)
+			
+		
+
+def runz3(problem,TMAX,waitsMIN,alpha):	
+	xMax = problem.wm.xMax
+	yMax = problem.wm.yMax
+	
+	obstacles = problem.obstacles 
+	robotLocs = problem.robotLocs
+	robotGoalLoc = problem.goalStates
+	NUMBOTS= problem.num
+	assert NUMBOTS == len(robotGoalLoc);
+	
+	#boolean variables to find
+	#r_RNUM_t_TNUM_DIR 
+	s=Solver()
+	bits = dict()
+	for i in range(NUMBOTS):
+		bits[i] = dict()
+	
+	#for j in range(TMAX):
+	#	addBitsToz3(NUMBOTS,j,bits,s)
+	
+	curpos = dict()
+	getLocs(robotLocs,curpos)
+	print curpos
+	goalpos = dict()
+	getLocs(robotGoalLoc,goalpos)
+	print goalpos
+	nextpos = dict()
+	
+	for j in range(TMAX):
+		addBitsToz3(NUMBOTS,j,bits,s)
+		#move according to bits defined above
+
+		for i in range(NUMBOTS):
+			if(alpha != None):
+				#only allowed moves would be UP or DOWN or WAIT unless cury==alpha
+				s.add(Implies(curpos[i][1] != alpha,And(Not(bits[i][j]['l']),Not(bits[i][j]['r']))))
+			nextpos[i] = (None,None)
+			nextpos[i] = (If(bits[i][j]['l'],curpos[i][0]-1,
+						 		If(bits[i][j]['r'],curpos[i][0]+1, 
+						 			curpos[i][0]
+						 		)
+						 	),
+						  If(bits[i][j]['d'],curpos[i][1]-1,
+						 		If(bits[i][j]['u'],curpos[i][1]+1, 
+						 			curpos[i][1]
+						 		)
+						 	)
+						 )	 	
+			addConstraintsIsValid(xMax,yMax,obstacles,s,nextpos[i])	
+			
+		#Constraints to make sure they don't collide AND swapping of places doesn't happen!
+		#(1) nextpos[i] != nextpos[k] for any k < i 
+		#(2) nextpos[i] != curpos[k] || nextpos[k] != curpos[i] for all k != i 
+		for i in range(NUMBOTS):
+			for k in range(i):
+				s.add(Or(nextpos[i][0] != nextpos[k][0],nextpos[i][1] != nextpos[k][1]))
+				s.add(Or(Or(nextpos[i][0] != curpos[k][0],nextpos[i][1] != curpos[k][1]),
+						 Or(nextpos[i][0] != curpos[k][0],nextpos[i][1] != curpos[k][1])))
+				s.add(Or(Or(curpos[i][0] != nextpos[k][0],curpos[i][1] != nextpos[k][1]),
+						 Or(curpos[i][0] != nextpos[k][0],curpos[i][1] != nextpos[k][1])))
+		for i in range(NUMBOTS):
+			curpos[i] = nextpos[i]
+			
+		s.push()
+		#goal assertions
+		for r in range(NUMBOTS):
+			s.add(curpos[r][0] == goalpos[r][0])
+			s.add(curpos[r][1] == goalpos[r][1])			
+		if( s.check() == sat):
+			#TODO: add fixed paths as assumed bits to be true! can encode paths here!
+			print "Solved with t = " + str(j+1)
+			#print s
+			M = s.model()
+			#print M
+			#each entry in movelist is (time,robotID, move)
+			#move 0 - LEFT/west, 1- RIGHT/east, 2- UP/north, 3 - DOWN/south, 4- NO CHANGE
+			movelist = []
+			for t in range(j+1):
+				for r in range(NUMBOTS):
+					if is_true(M[bits[r][t]['l']]):
+						#print t,r,"XAXAXAXA"
+						movelist.append((t,r,0))
+					elif is_true(M[bits[r][t]['r']]):
+						movelist.append((t,r,1))
+					elif is_true(M[bits[r][t]['u']]):
+						movelist.append((t,r,2))
+					elif is_true(M[bits[r][t]['d']]):
+						movelist.append((t,r,3))
+					else:
+						movelist.append((t,r,4))
+			#print movelist
+			verifyMoveList(problem,movelist)
+			return movelist
+		else:
+			s.pop()
+			if(j == TMAX-1):
+				print s
+			print "Not solvable with t = " + str(j+1)
+	
+	return []		
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

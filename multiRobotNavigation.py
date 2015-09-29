@@ -10,7 +10,7 @@ from itertools import product, chain
 from collections import Counter
 from  Search import ucSearch
 from argparse import ArgumentParser
-from genSketch import runSketch, findBestMoveList, findBestMoveListLinear
+from genSketch import runSketch, findBestMoveList, findBestMoveListLinear, runz3
 import ast
 from problems import get_problem_b, get_problem_a, get_problem_c
 
@@ -30,10 +30,11 @@ class MovePrimitive(Primitive):
 		return self.direction
 
 class WorldModel:
-	def __init__(self, xMax, yMax, obstacles, robotLocs):
+	def __init__(self, xMax, yMax, obstacles, robotLocs, goalLocs):
 		self.xMax = xMax
 		self.yMax = yMax
 		self.robotLocs = [list(rL) for rL in robotLocs]
+		self.goalLocs = [list(rL) for rL in goalLocs]
 		self.home = [list(rL) for rL in robotLocs]
 		self.obstacles = [list(o) for o in obstacles] # list of (x,y) pairs
 		self.gridMap = gridMap.GridMap(xMax, yMax)
@@ -88,9 +89,12 @@ class WorldModel:
 		return True
 
 	def draw(self, color = 'cyan'):
-		robot_colors =lambda x:  ['red', 'purple', 'blue'][x % 3]
-		
+		robot_colors =lambda x:  ['red', 'purple', 'blue', 'yellow', 'green'][x % 5]
 		objects = [('', loc, 'black') for loc in self.obstacles]
+		
+		for i, goalLoc in enumerate(self.goalLocs):
+			objects.append(('g%d' %i , goalLoc, 'grey'))
+		
 		for i, robotLoc in enumerate(self.robotLocs):
 			objects.append(('r%d' %i , robotLoc, robot_colors(i)))
 		self.gridMap.drawWorld(objects)
@@ -124,14 +128,14 @@ def successors(wm, single, extra_obstacles=[None]):
 		else: return False
 
 	def applyAction(action, robotLoc):
-                global alpha
-                if alpha != None and robotLoc[1] != alpha:
-                    valid_dirs = subdirs
-                else:
-                    valid_dirs = dirs
+		global alpha
+		if alpha != None and robotLoc[1] != alpha:
+			valid_dirs = subdirs
+		else:
+			valid_dirs = dirs
 
-                if not action in valid_dirs:
-                    return robotLoc
+		if not action in valid_dirs:
+			return robotLoc
 		if action =="nop":
 			return robotLoc
 		else:
@@ -176,11 +180,11 @@ def successors(wm, single, extra_obstacles=[None]):
 			next_states.append( (tuple(robotLocs) , cost))
 		return next_states
 	def single_get_successors(robotLoc):
-                global alpha
-                if alpha!=None and  robotLoc[1] != alpha:
-                    valid_dirs = subdirs
-                else:
-                    valid_dirs = dirs
+		global alpha
+		if alpha!=None and  robotLoc[1] != alpha:
+			valid_dirs = subdirs
+		else:
+			valid_dirs = dirs
 		next_states = []
 		for act in valid_dirs:
 			rl = moveLocByDirection(list(robotLoc), act)
@@ -223,7 +227,7 @@ class Problem:
 		self.num = len(robotLocs)
 		self.bots = range(self.num)
 		self.obstacles = obstacles
-		self.wm = WorldModel(xMax,yMax,obstacles,self.startStates)
+		self.wm = WorldModel(xMax,yMax,obstacles,self.startStates,self.goalStates)
 		self.noh = noh
 	
 	def getSearchParams(self,i):
@@ -256,7 +260,7 @@ def generatePathandConstraints(problem):
 		paths[i], expanded, Cost = ucSearch( \
 				successors(problem.wm, single=True), start,goalTest,heuristic)
 		if paths[i] == None:
-                        import pdb; pdb.set_trace()
+			import pdb; pdb.set_trace()
 			print "failed to find individual path,  no solution"
 			didFail()
 
@@ -376,14 +380,14 @@ def get_problem_params(i=0):
 		robotLocs = [[3*i,i+1] for i in range(1)]
 		robotGoalLoc = [[i+2,i+5] for i in range(1)]
 
-        elif i ==5:
-                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(6,2)
-                global alpha
-                alpha = yMax -1
-        elif i == 6:
-            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_a()
-        elif i ==7:
-            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c()
+	elif i ==5:
+			xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(6,2)
+			global alpha
+			alpha = yMax -1
+	elif i == 6:
+		xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_a()
+	elif i ==7:
+		xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c()
 
 	return xMax,yMax,obstacles,robotLocs,robotGoalLoc
  
@@ -412,12 +416,12 @@ def sketch_simulate_graphic(movelist, problem,filename):
 		for (robot,mvstr) in timedmoves[k]:
 			prim = MovePrimitive(mvstr)
 			problem.wm.doi(robot,prim)
-		time.sleep(1)
+		time.sleep(2)
 	with open(filename,'w') as f:
 		f.write(str(timedmoves))
 
 if __name__=="__main__":
-        global alpha
+	global alpha
 	parser = ArgumentParser()
 	
 	parser.add_argument("--noh",action="store_true")
@@ -425,30 +429,32 @@ if __name__=="__main__":
 	parser.add_argument("--p", type=int, default=0)
 	
 	parser.add_argument("--sketch",action="store_true")
+	parser.add_argument("--z3",action="store_true")
 	parser.add_argument("--waits_optimize",action="store_true")
 	parser.add_argument("--simulate_sol",type=str,default="")
 	parser.add_argument("--time_max", type=int, default=-1)
 	parser.add_argument("--waits_reward", type=int, default=0)
 
-        parser.add_argument("--n",type=int, default=None)
-        parser.add_argument("--a",type=int, default=None)
-        parser.add_argument("--full", action="store_true")
+	parser.add_argument("--n",type=int, default=None)
+	parser.add_argument("--a",type=int, default=None)
+	parser.add_argument("--full", action="store_true")
 
 	
 	args = parser.parse_args()
 	xMax,yMax,obstacles,robotLocs,robotGoalLoc = get_problem_params(args.p)
-        
-        if args.n != None and args.a != None:
-            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(args.n,args.a)
-            alpha = args.a
-        else:
-            alpha = None
-       	
-        problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
-        if args.full:
-	    get_full_config_path(problem)
+		
+	if args.n != None and args.a != None:
+		xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_b(args.n,args.a)
+		alpha = args.a
+	else:
+		alpha = None
+	   	
+	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
+	if args.full:
+		get_full_config_path(problem)
 	problem.wm.draw()
-        raw_input("Done")
+	raw_input("Done")
+	
 	if args.simulate_sol != "":
 		with open(args.simulate_sol,'r') as f:
 			lines = f.readlines()
@@ -458,15 +464,20 @@ if __name__=="__main__":
 				for (robot,mvstr) in timedmoves[k]:
 					prim = MovePrimitive(mvstr)
 					problem.wm.doi(robot,prim)
-				time.sleep(1)
-	elif args.sketch:
-		if(args.time_max > 0):
+				time.sleep(1)	
+	elif args.sketch or args.z3:
+		if args.time_max > 0 and args.sketch:
 			movelist = runSketch('temp.sk',problem,args.time_max,args.waits_reward,alpha)
-		else:
+		elif args.time_max > 0 and args.z3:
+			movelist = runz3(problem,args.time_max,0,alpha)
+		elif args.sketch:
 			movelist = findBestMoveList(problem,alpha,args.waits_optimize)
-		
+		else:
+			print "Invalid options for --sketch or --z3"
+			exit(1)
+			
 		if(len(movelist) == 0):
-			print "Couldn't find solution with Sketch, TODO: change TMAX etc"
+			print "Couldn't find solution with Sketch/z3, TODO: change TMAX etc"
 			exit(1)
 		else:
 			#each entry in movelist is (time,robotID, move)
@@ -478,12 +489,11 @@ if __name__=="__main__":
 				fname = fname + "_a" + str(args.a)
 			if(args.n):
 				fname = fname + "_n" + str(args.n)
-			sketch_simulate_graphic(movelist,problem,fname + ".sol")
-				
+			sketch_simulate_graphic(movelist,problem,fname + ".sol")	
 	else:
 		
 		#if args.p != 0:
-	        #		get_full_config_path(problem)
+			#		get_full_config_path(problem)
 
 		compositeRobots,paths, total_expanded,C= generatePathandConstraints(problem)
 		CR = list(compositeRobots)
@@ -537,4 +547,4 @@ if __name__=="__main__":
 						time.sleep(1)
 
   
-        raw_input("Done")
+		raw_input("Done")
