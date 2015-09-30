@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from genSketch import runSketch, findBestMoveList, findBestMoveListLinear, runz3
 import ast
 from problems import get_problem_b, get_problem_a, get_problem_c
+from ari_code import RoadMap, phase_one, new_generateConstraintGraph
 
 global alpha
 
@@ -221,6 +222,8 @@ def didFail():
 
 class Problem:
 	def __init__(self, xMax,yMax, robotLocs, goalStates, obstacles, noh=False):
+                self.xMax = xMax
+                self.yMax = yMax
 		self.robotLocs = robotLocs
 		self.startStates =  tuple(tuple(rl) for rl in robotLocs) 
 		self.goalStates = goalStates
@@ -229,7 +232,8 @@ class Problem:
 		self.obstacles = obstacles
 		self.wm = WorldModel(xMax,yMax,obstacles,self.startStates,self.goalStates)
 		self.noh = noh
-	
+                self.rm = RoadMap(self)
+
 	def getSearchParams(self,i):
 		if type(i) == list:  #multiple robot
 			start = tuple(self.startStates[r] for r in i)
@@ -260,7 +264,6 @@ def generatePathandConstraints(problem):
 		paths[i], expanded, Cost = ucSearch( \
 				successors(problem.wm, single=True), start,goalTest,heuristic)
 		if paths[i] == None:
-			import pdb; pdb.set_trace()
 			print "failed to find individual path,  no solution"
 			didFail()
 
@@ -450,6 +453,8 @@ if __name__=="__main__":
 		alpha = None
 	   	
 	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
+        phase_one(problem)
+        #new_generateConstraintGraph(problem)
 	if args.full:
 		get_full_config_path(problem)
 	problem.wm.draw()
