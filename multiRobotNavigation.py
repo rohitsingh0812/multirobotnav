@@ -16,7 +16,7 @@ from problems import get_problem_b, get_problem_a, get_problem_c
 from ari_code import RoadMap, phase_one, new_generateConstraintGraph
 
 global alpha
-
+alpha = False
 class Primitive:
 	def __init__(self):
 		pass
@@ -497,19 +497,18 @@ if __name__=="__main__":
 			sketch_simulate_graphic(movelist,problem,fname + ".sol")	
 	else:
 		
-		#if args.p != 0:
-			#		get_full_config_path(problem)
 
 		compositeRobots,paths, total_expanded,C= generatePathandConstraints(problem)
 		CR = list(compositeRobots)
 		print CR
 		print "Phase 1: %s \t expanded: %d" %(CR, total_expanded)
-		
+		"""
 		for i,cr in enumerate(compositeRobots):
 			if len(cr) > 1: # composite robot
 				CR, C, expanded = resolveConflict(problem, CR, i, C)
 				total_expanded += expanded
-		
+		"""
+                
 		print "Phase 2: %s \t expanded: %d" %(CR, total_expanded)
 		
 		# Attempt to find path for coupled robots within their sub problems

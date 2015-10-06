@@ -9,9 +9,9 @@ def get_problem_a():
     xMax,yMax = 5,5
     return xMax, yMax, starts, goals, obstacles
 
-def get_problem_c(xMax=10,yMax=10,n=10,o=10):
+def get_problem_c(xMax=15,yMax=10,n=20):
     G = xMax*yMax
-    k = 2*n + o
+    k = 2*n 
     starts = []
     goals = []
     obstacles = []
@@ -26,7 +26,8 @@ def get_problem_c(xMax=10,yMax=10,n=10,o=10):
         elif i <2*n:
             goals.append((x,y))
         else:
-            obstacles.append((x,y))
+            if random.random() < .5:
+                obstacles.append((x,y))
 
     return xMax, yMax, starts, goals, obstacles
 
