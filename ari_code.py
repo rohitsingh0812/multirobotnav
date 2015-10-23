@@ -28,7 +28,8 @@ class RoadMap:
     
     def search(self,source,target):
         try:
-            ret = list(nx.all_shortest_paths(self.G, source, target))
+            #XXX https://networkx.github.io/documentation/latest/reference/algorithms.html
+            ret = list(nx.shortest_path(self.G, source, target))
                 
         except:
                 ret = None

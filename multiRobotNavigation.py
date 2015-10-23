@@ -453,6 +453,10 @@ if __name__=="__main__":
 		alpha = None
 	   	
 	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,args.noh)
+        #XXX ROHIT HOW TO SEARCH :-) 
+        print problem.rm.search(robotLocs[0], robotGoalLoc[0])
+        raw_input("DONE")
+
         phase_one(problem)
         #new_generateConstraintGraph(problem)
 	if args.full:
