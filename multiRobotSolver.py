@@ -7,7 +7,7 @@
 """
 import time
 from argparse import ArgumentParser
-from multiRobotWorld import WorldModel, successors, MovePrimitive
+from multiRobotWorld import WorldModel, successors, MovePrimitive, getMotionPrimitive, getPrimitives
 from ari_solver import RoadMap, ari_solver
 from problems import get_problem_params
 from rohit_solver import rohit_solver
@@ -68,6 +68,8 @@ Each tuple has r_idx- index of the robot and path_r_idx that robots path.
 The robot can be composite so the path must be executed simulatenously
 """
 def ari_simulate_graphic(problem, path):
+    problem.wm.draw()
+    time.sleep(1)
     for (cr, path_r) in path:
         r_size = len(cr)
         if r_size == 1:
@@ -78,7 +80,6 @@ def ari_simulate_graphic(problem, path):
                         time.sleep(1)
         else:
             path = path_r
-            totalSteps += len(path)
             for p in range(1,len(path)):
                     prims = getPrimitives(path[p-1], path[p])
                     for z in range(r_size):
@@ -137,7 +138,7 @@ if __name__=="__main__":
 	args = parser.parse_args()
 	xMax,yMax,obstacles,robotLocs,robotGoalLoc,alpha = get_problem_params(args)
 	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
-        
+        problem.wm.draw()
         if args.simulate_sol != "" or args.sketch or args.z3:
             print "using rohit's solver!"
             movelist, name, solved = rohit_solver(problem,args)
