@@ -9,7 +9,7 @@ import time
 from argparse import ArgumentParser
 from multiRobotWorld import WorldModel, successors, MovePrimitive, getMotionPrimitive, getPrimitives
 from ari_solver import RoadMap, ari_solver
-from problems import get_problem_params
+from problems import get_problem_params, get_problem_c
 from rohit_solver import rohit_solver
 
 	
@@ -27,7 +27,7 @@ class Problem:
 		self.num = len(robotLocs)
 		self.bots = range(self.num)
 		self.obstacles = obstacles
-		self.wm = WorldModel(xMax,yMax,obstacles,self.startStates,self.goalStates)
+		self.wm = WorldModel(xMax,yMax,obstacles,self.startStates,self.goalStates, display=False)
 		self.noh = noh
                 self.rm = RoadMap(self)
                 self.alpha = alpha
@@ -134,17 +134,41 @@ if __name__=="__main__":
 	parser.add_argument("--a",type=int, default=None)
 	parser.add_argument("--full", action="store_true")
 
+        parser.add_argument('--tests', action='store_true')
+
 	
 	args = parser.parse_args()
-	xMax,yMax,obstacles,robotLocs,robotGoalLoc,alpha = get_problem_params(args)
-	problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
-        problem.wm.draw()
-        if args.simulate_sol != "" or args.sketch or args.z3:
-            print "using rohit's solver!"
-            movelist, name, solved = rohit_solver(problem,args)
-	    sketch_simulate_graphic(movelist,problem,name, solved)	
+
+        
+        if args.tests :
+            results = ""
+            for n in [10, 20, 25]:
+                alpha = None
+                try:
+                    start = time.time()
+                    for i in range(10):
+	                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c(15,15,n)
+	                problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
+                        start = time.time()
+                        movelist, name, solved, solve_t = rohit_solver(problem,args)
+                        test_time  = time.time() - start    
+                        results += "%d, %d, %.2f\n" %(n, solve_t, test_time)
+                        with open('results.txt', 'wb') as f:
+                            f.write(results)
+                except:
+                    print "failed!"
         else:
-            print "using ari's solver!"
-            path = ari_solver(problem,args)
-            ari_simulate_graphic(problem, path)
+            xMax,yMax,obstacles,robotLocs,robotGoalLoc,alpha = get_problem_params(args)
+	    problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
+            problem.wm.draw()
+
+            if args.simulate_sol != "" or args.sketch or args.z3:
+                print "using rohit's solver!"
+                movelist, name, solved = rohit_solver(problem,args)
+                sketch_simulate_graphic(movelist,problem,name, solved)	
+
+            else:
+                print "using ari's solver!"
+                path = ari_solver(problem,args)
+                ari_simulate_graphic(problem, path)
 

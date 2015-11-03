@@ -13,6 +13,17 @@ from itertools import product, permutations
 def ari_solver(problem,args):
    return phase_one(problem)
 
+
+def get_paths(problem):
+    num_comp, scc, c, paths = iterative_generateConstraintGraph(problem)
+    """
+    paths = [None]*problem.num
+    r_locs= zip(problem.startStates, problem.goalStates)
+    paths = [problem.rm.single_search(s,g) for i, (s,g) in enumerate(r_locs)]
+    """
+    return paths
+
+
 class RoadMap:
     def __init__(self, problem):
         self.G = nx.Graph()
@@ -31,7 +42,16 @@ class RoadMap:
                     if check(e):self.G.add_edge( (x,y), e)
         obs = [tuple(o) for o in problem.obstacles]
         self.G.remove_nodes_from(obs)
-    
+
+    def single_search(self, source,target):
+        try:
+            #XXX https://networkx.github.io/documentation/latest/reference/algorithms.html
+            ret = list(nx.shortest_path(self.G, source, target))
+                
+        except:
+                ret = None
+        return ret
+
     def search(self,source,target):
         try:
             #XXX https://networkx.github.io/documentation/latest/reference/algorithms.html
@@ -268,6 +288,9 @@ def iterative_generateConstraintGraph(problem):
     vals = [range(len(all_constraints[r])) for r in all_constraints]
     ordering = list(product(*vals))
     best_max_scc = None
+
+    count = 1
+    
     for order in ordering:
         G = nx.DiGraph()
         G.add_nodes_from(problem.bots)
@@ -278,13 +301,15 @@ def iterative_generateConstraintGraph(problem):
             p = [ all_constraints[r][c][1] for (r,c) in enumerate(order)]
             return (scc_len, scc, G, p)
         
-        if best_max_scc == None or max_scc < best_max_scc:
+        if best_max_scc == None or scc_len > best_scc_len:
             best_max_scc = max_scc
             best_scc = scc
             best_p = [ all_constraints[r][c][1] for (r,c) in enumerate(order)]
             best_G = G
             best_scc_len = scc_len
-
+        count += 1
+        if count > 10:
+            break
 
     print "no solution founds"
     return (best_scc_len, best_scc, best_G, best_p)

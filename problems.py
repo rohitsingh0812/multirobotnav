@@ -63,9 +63,9 @@ if __name__=="__main__":
 Random problem.  
 Grid xMax,yMax with n robots.  Creates obstacles with 50% probabilty
 """
-def get_problem_c(xMax=10,yMax=10,n=20):
+def get_problem_c(xMax=10,yMax=10,n=10):
     G = xMax*yMax
-    k = 2*n 
+    k = G #2*n 
     starts = []
     goals = []
     obstacles = []
@@ -80,7 +80,7 @@ def get_problem_c(xMax=10,yMax=10,n=20):
         elif i <2*n:
             goals.append((x,y))
         else:
-            if random.random() < .5:
+            if random.random() < .3:
                 obstacles.append((x,y))
 
     return xMax, yMax, starts, goals, obstacles

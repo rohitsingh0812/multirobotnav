@@ -31,14 +31,17 @@ class MovePrimitive(Primitive):
 		return self.direction
 
 class WorldModel:
-	def __init__(self, xMax, yMax, obstacles, robotLocs, goalLocs):
+	def __init__(self, xMax, yMax, obstacles, robotLocs, goalLocs, display=True):
 		self.xMax = xMax
 		self.yMax = yMax
 		self.robotLocs = [list(rL) for rL in robotLocs]
 		self.goalLocs = [list(rL) for rL in goalLocs]
 		self.home = [list(rL) for rL in robotLocs]
 		self.obstacles = [list(o) for o in obstacles] # list of (x,y) pairs
-		self.gridMap = gridMap.GridMap(xMax, yMax)
+                self.display = display
+
+                if self.display:
+                    self.gridMap = gridMap.GridMap(xMax, yMax)
 
 	
 	def legalLoc(self, (x, y)):
