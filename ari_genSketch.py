@@ -303,11 +303,12 @@ def runz3(problem,TMAX,waitsMIN,alpha):
 	nextpos = dict()
 
 
-        deviation = 3
+        deviation = 5
         paths = get_paths(problem)
-	
+        max_path = max([len(p) for p in paths])
+
 	TMAX_max = (problem.wm.xMax+problem.wm.yMax)*2+problem.num
-        for j in range(TMAX_max):
+        for j in range( TMAX_max):
 		addBitsToz3(NUMBOTS,j,bits,s)
 		#move according to bits defined above
 

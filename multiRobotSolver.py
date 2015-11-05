@@ -142,21 +142,25 @@ if __name__=="__main__":
         
         if args.tests :
             results = ""
-            for n in [10, 20, 25]:
+            for n in [5, 10]:
                 alpha = None
-                try:
+                start = time.time()
+                for i in range(10):
+	            xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c(15,15,n)
+	            problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
                     start = time.time()
-                    for i in range(10):
-	                xMax,yMax,robotLocs,robotGoalLoc,obstacles = get_problem_c(15,15,n)
-	                problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)
-                        start = time.time()
+                    try:
                         movelist, name, solved, solve_t = rohit_solver(problem,args)
                         test_time  = time.time() - start    
                         results += "%d, %d, %.2f\n" %(n, solve_t, test_time)
                         with open('results.txt', 'wb') as f:
                             f.write(results)
-                except:
-                    print "failed!"
+                    except:
+                        test_time  = time.time() - start    
+                        results += "%d, -1, %.2f\n" %(n,  test_time)
+                        with open('results.txt', 'wb') as f:
+                            f.write(results)
+                        print "failed!"
         else:
             xMax,yMax,obstacles,robotLocs,robotGoalLoc,alpha = get_problem_params(args)
 	    problem = Problem(xMax,yMax,robotLocs,robotGoalLoc,obstacles,alpha, args.noh)

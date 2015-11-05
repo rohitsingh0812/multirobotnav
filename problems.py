@@ -80,7 +80,7 @@ def get_problem_c(xMax=10,yMax=10,n=10):
         elif i <2*n:
             goals.append((x,y))
         else:
-            if random.random() < .3:
+            if random.random() < .1:
                 obstacles.append((x,y))
 
     return xMax, yMax, starts, goals, obstacles
